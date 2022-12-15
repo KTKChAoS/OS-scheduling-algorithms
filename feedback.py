@@ -1,11 +1,23 @@
-from queue import Queue, PriorityQueue
+from queue import PriorityQueue, Queue
+import copy
 
 
-def vrr(processL: list, eventq: PriorityQueue, quantum: int):
+def feedback(processL: list, eventq: PriorityQueue, quantum: int, num_priorities: int):
     clock = 0
     cpuIdle = True
-    auxq = Queue()
-    readyq = Queue()
+
+    tempq = copy.copy(eventq)
+    eventq = PriorityQueue()
+
+    while not tempq.empty():
+        event = tempq.get()
+        event += (0,)
+        eventq.put(event)
+
+    # feedQ will be list of queues, and the q will contain pid
+    feedQ = []
+    for i in range(0, num_priorities):
+        feedQ.append(Queue())
 
     while True:
         if eventq.empty():
@@ -17,10 +29,12 @@ def vrr(processL: list, eventq: PriorityQueue, quantum: int):
             if event[0] >= clock:
                 clock = event[0]
 
+            # priority doesn't change as it wasn't timed out
             if event[1] == 'ARRIVAL':
-                readyq.put(event[2])
+                # print("here for ", event[2], event[1])
+                feedQ[0].put(event[2])
             else:
-                auxq.put(event[2])
+                feedQ[event[3]].put(event[2])
 
             # subtracting cur time from resp. sum
             processL[event[2]][1][4] -= clock
@@ -30,7 +44,10 @@ def vrr(processL: list, eventq: PriorityQueue, quantum: int):
                 clock = event[0]
             cpuIdle = True
             processL[event[2]][1][4] -= clock
-            readyq.put(event[2])
+            if event[3] == (num_priorities - 1):
+                feedQ[num_priorities - 1].put(event[2])
+            else:
+                feedQ[event[3]+1].put(event[2])
 
         elif event[1] == 'BLOCK':
             if event[0] > clock:
@@ -39,7 +56,7 @@ def vrr(processL: list, eventq: PriorityQueue, quantum: int):
             time = int(stuff[stuff.find(" "):stuff.find(" ", stuff.find(" ") + 1)])
 
             # adding unblock event to queue
-            eventq.put((clock + time, 'UNBLOCK', event[2]))
+            eventq.put((clock + time, 'UNBLOCK', event[2], event[3]))
 
             cpuIdle = True
 
@@ -55,14 +72,16 @@ def vrr(processL: list, eventq: PriorityQueue, quantum: int):
             processL[event[2]][1][3] = clock
 
         if cpuIdle:
-            if auxq.empty():
-                if readyq.empty():
-                    continue
-                pid = readyq.get()
-                # print('dispatch rq ' + str(pid))
-            else:
-                pid = auxq.get()
-                # print('dispatch aq ' + str(pid))
+            flag = False
+            pid, i = -1, -1
+            for i in range(0, len(feedQ)):
+                if not feedQ[i].empty():
+                    pid = feedQ[i].get()
+                    break
+                elif i == len(feedQ) - 1:
+                    flag = True
+            if flag:
+                continue
 
             # setting start time
             if processL[pid][2]:
@@ -96,8 +115,8 @@ def vrr(processL: list, eventq: PriorityQueue, quantum: int):
             else:
                 if bursttime <= quantum:
                     # adding block event to aux queue
-                    eventq.put(((clock + time), 'BLOCK', pid))
+                    eventq.put(((clock + time), 'BLOCK', pid, i))
 
                 else:
                     # adding timeout to ready queue
-                    eventq.put((clock + quantum, 'TIMEOUT', pid))
+                    eventq.put((clock + quantum, 'TIMEOUT', pid, i))

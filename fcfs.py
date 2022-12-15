@@ -7,16 +7,16 @@ def fcfs(processL: list, eventq: PriorityQueue):
         if eventq.empty():
             return
         event = eventq.get()
-        #print(event)
-
+        # print(event)
         if event[1] == 'ARRIVAL' or event[1] == 'UNBLOCK':
             if event[0] >= clock:
                 clock = event[0]
-                processL[event[2]][1][4].append(0)
+                processL[event[2]][1][5] += 1
             else:
-                processL[event[2]][1][4].append(clock - event[0])
+                processL[event[2]][1][4] += (clock - event[0])
+                processL[event[2]][1][5] += 1
 
-            #arrival time
+            # start time
             if event[1] == 'ARRIVAL':
                 processL[event[2]][1][2] = clock
 
@@ -24,12 +24,12 @@ def fcfs(processL: list, eventq: PriorityQueue):
             time = int(stuff[stuff.find(" "):stuff.find(" ", stuff.find(" ") + 1)])
 
             clock += time
-            #print(time)
+            # print(time)
 
             # service time update
             processL[event[2]][1][1] += time
 
-            #updating process stuff
+            # updating process stuff
             new_stuff = stuff[stuff.find(' ', 4)+1:]
             processL[event[2]][0] = new_stuff
 
@@ -45,7 +45,7 @@ def fcfs(processL: list, eventq: PriorityQueue):
             if event[0] > clock:
                 clock = event[0]
             stuff = processL[event[2]][0]
-            time = int(stuff[stuff.find(" ") + 1])
+            time = int(stuff[stuff.find(" "):stuff.find(" ", stuff.find(" ") + 1)])
 
             # adding unblock event to queue
             eventq.put((event[0] + time, 'UNBLOCK', event[2]))
@@ -53,4 +53,3 @@ def fcfs(processL: list, eventq: PriorityQueue):
             # updating process stuff
             new_stuff = stuff[stuff.find(' ', 3) + 1:]
             processL[event[2]][0] = new_stuff
-

@@ -7,17 +7,21 @@ from srt import srt
 from vrr import vrr
 
 if __name__ == '__main__':
+
     processL = []
     file1 = open("pfile", "r")
+
     for line in file1:
         arrT = int(line[:line.find(" ")])
-        # process, arrival time, service time, start time, finish time, response times
-        temp = [line.strip()[line.find(" ")+1:]+' ', [arrT, 0, 0, 0, []]]
+
+        # process, arrival time, service time, start time, finish time, response time sum, times in q
+        temp = [line.strip()[line.find(" ")+1:]+' ', [arrT, 0, 0, 0, 0, 0], True]
         processL.append(temp)
     file1.close()
-    #processL[0][1][4].append(0)
-    #print(processL)
+    # processL[0][1][4].append(0)
+    # print(processL)
 
+    # creating priority queue for events and adding in all arrival events
     eventq = PriorityQueue()
     q = 0
     for r in processL:
@@ -26,6 +30,7 @@ if __name__ == '__main__':
 
     file2 = open("sfile", "r")
     algo = file2.readline().strip()
+
     # FCFS
     if algo.lower() == 'fcfs':
         print("Using First Come First Serve algorithm")
@@ -38,21 +43,23 @@ if __name__ == '__main__':
         quantum = int(temp[temp.find('=')+1:])
         vrr(processL, eventq, quantum)
 
-    # SPN
+    # SRT
     elif algo.lower() == 'srt':
         print("Using Shortest Remaining Time algorithm")
         temp = file2.readline().strip()
         service_given = False
         alpha = 0
         if temp[0] == 's':
-            service_given = bool(temp[temp.find('=')+1:])
+            if temp[temp.find('=') + 1].lower() == 't':
+                service_given = True
         else:
-            alpha = int(temp[temp.find('=')+1:])
+            alpha = float(temp[temp.find('=')+1:])
         temp = file2.readline().strip()
         if temp[0] == 'a':
-            alpha = int(temp[temp.find('=') + 1:])
+            alpha = float(temp[temp.find('=') + 1:])
         else:
-            service_given = bool(temp[temp.find('=') + 1:])
+            if temp[temp.find('=') + 1].lower() == 't':
+                service_given = True
         srt(processL, eventq, service_given, alpha)
 
     # HRRN
@@ -62,14 +69,16 @@ if __name__ == '__main__':
         service_given = False
         alpha = 0
         if temp[0] == 's':
-            service_given = bool(temp[temp.find('=')+1:])
+            if temp[temp.find('=')+1].lower() == 't':
+                service_given = True
         else:
-            alpha = int(temp[temp.find('=')+1:])
+            alpha = float(temp[temp.find('=')+1:])
         temp = file2.readline().strip()
         if temp[0] == 'a':
-            alpha = int(temp[temp.find('=') + 1:])
+            alpha = float(temp[temp.find('=') + 1:])
         else:
-            service_given = bool(temp[temp.find('=') + 1:])
+            if temp[temp.find('=')+1].lower() == 't':
+                service_given = True
         hrrn(processL, eventq, service_given, alpha)
 
     # FEEDBACK
@@ -97,12 +106,13 @@ if __name__ == '__main__':
 
     file2.close()
 
+    # printing the info
     i = 0
     mtat, mntat, mrt = 0, 0, 0
     for r in processL:
         print("Process ", str(i))
-        print("\tArrival Time: ", str(r[1][0]))
-        print("\tService Time: ", r[1][1])
+        print("\tArrival Time: ", r[1][0])
+        print("\tService Time: ", round(r[1][1], 3))
         print("\tStart Time: ", r[1][2])
         print("\tFinish Time: ", r[1][3])
         tat = r[1][3] - r[1][0]
@@ -111,9 +121,13 @@ if __name__ == '__main__':
         ntat = tat/r[1][1]
         mntat += ntat
         print("\tNorm. Turn. Time Time: ", round(ntat, 3))
-        rt = sum(r[1][4])/len(r[1][4])
+        if r[1][4] == 0:
+            rt = 0
+        else:
+            rt = (r[1][4])/(r[1][5])
         mrt += rt
         print("\tAvg. resp. time Time: ", round(rt, 3))
+        print("---------------------------------------")
         i += 1
     print("Mean Turnaround: ", round(mtat/i, 2))
     print("Mean Norm. Turnaround: ", round(mntat/i, 2))
